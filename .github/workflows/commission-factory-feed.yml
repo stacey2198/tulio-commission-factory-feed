@@ -1,0 +1,35 @@
+name: Update Commission Factory feed
+
+on:
+  schedule:
+    # 6:00am Australia/Brisbane (UTC+10, no daylight saving) = 20:00 UTC previous day
+    - cron: "0 20 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update-feed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate feed
+        env:
+          SHOPIFY_STORE_DOMAIN: ${{ secrets.SHOPIFY_STORE_DOMAIN }}
+          CF_FEED_CLIENT_ID: ${{ secrets.CF_FEED_CLIENT_ID }}
+          CF_FEED_CLIENT_SECRET: ${{ secrets.CF_FEED_CLIENT_SECRET }}
+        run: python scripts/generate_feed.py
+
+      - name: Commit updated feed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add feed/tulio-commission-factory.xml
+          git diff --cached --quiet && echo "No changes" || git commit -m "Update Commission Factory feed"
+          git push
